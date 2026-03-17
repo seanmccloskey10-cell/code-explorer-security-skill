@@ -46,6 +46,44 @@ CREATE POLICY "Users access own files" ON storage.objects
   FOR ALL USING (auth.uid()::text = (storage.foldername(name))[1]);
 ```
 
+### Never use `user_metadata` in RLS policies
+
+`user_metadata` is writable by the authenticated user themselves. Any policy that reads from it can be self-escalated.
+
+```sql
+-- WRONG — user can update their own metadata to set role: 'admin'
+CREATE POLICY "Admins only" ON admin_settings
+  USING (auth.jwt()->>'user_metadata'->>'role' = 'admin');
+
+-- RIGHT — use a server-controlled table for roles
+-- profiles table with is_admin managed only via service_role
+CREATE POLICY "Admins only" ON admin_settings
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+    )
+  );
+```
+
+### UPDATE policies without column restrictions = mass assignment
+
+An UPDATE policy that allows `auth.uid() = user_id` with no column restriction lets users update ANY column in their row — including `is_admin`, `credits`, `balance`, or `role`.
+
+```sql
+-- WRONG — user can update is_admin on their own row
+CREATE POLICY "Users update own row" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- RIGHT — restrict which columns can be updated
+-- Use column-level security or restrict in application code
+-- Only allow name, bio, avatar — never is_admin, credits, role
+CREATE POLICY "Users update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+-- Then in your API, explicitly select only safe columns to update
+```
+
 ### Don't store rate limit counters in public tables
 Supabase tables are accessible via the REST API. Users can reset their own rate limit counters if stored in a public table. Use a private schema or Upstash Redis.
 

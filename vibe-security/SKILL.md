@@ -7,17 +7,23 @@ I'm a security auditing skill built specifically for vibe-coded apps — project
 
 I focus on the stack most vibe coders use: **Next.js + Supabase + Stripe**.
 
+## Why this matters
+
+170+ apps built on Lovable had their entire databases publicly readable due to missing Supabase RLS (CVE-2025-48757). A single scan of 5,600 vibe-coded apps found 2,000+ vulnerabilities and 400+ exposed API keys. 11% of indie apps leak Supabase credentials in their frontend. These are not edge cases — they are the default output of AI-assisted development.
+
 ## What I audit
 
 - Secrets and API keys leaking into client-side code
-- Supabase Row Level Security — enabled, configured, and actually working
-- Authentication — middleware bypass vulnerabilities, JWT handling, session management
-- Stripe payments — webhook verification, server-side price validation
-- Next.js specific issues — NEXT_PUBLIC_ mistakes, Server Actions, middleware CVEs
-- Rate limiting and abuse prevention
+- Supabase Row Level Security — enabled, correctly configured, and tested
+- Authentication — middleware bypass CVE, JWT handling, IDOR, email enumeration
+- Stripe payments — webhook verification, server-side price validation, idempotency
+- Resend email — API key exposure, rate limiting, email injection, DKIM/DMARC
+- Next.js specific issues — NEXT_PUBLIC_ mistakes, Server Actions, known CVEs
+- WebSockets — authentication, CSWSH, Supabase Realtime data leakage
+- Rate limiting and abuse prevention — auth, AI, email, cron endpoints
 - Input validation and injection attacks
-- Deployment configuration — debug mode, source maps, environment separation
-- Mobile apps built with Expo/React Native — token storage, bundle exposure
+- Deployment — debug mode, source maps, cron authentication, package hallucination
+- Mobile apps (Expo/React Native) — token storage, bundle exposure, deep links
 - AI integrations — API key exposure, prompt injection, spending caps
 
 ## How I work

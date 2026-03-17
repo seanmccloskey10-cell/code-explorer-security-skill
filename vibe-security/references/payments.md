@@ -77,6 +77,43 @@ if (session.payment_status === 'paid') {
 - Checkout session metadata set from client, not server
 - Refund/cancellation endpoints don't require authentication
 
+## Idempotency — don't process the same event twice
+
+Stripe retries webhook events if your endpoint is slow or returns a 5xx error. Without idempotency protection, a single payment can trigger multiple fulfillments — granting duplicate credits, sending duplicate emails, or creating duplicate records.
+
+```typescript
+// RIGHT — check if event already processed
+export async function POST(req: Request) {
+  // ... signature verification first ...
+
+  const existingEvent = await db.stripeEvents.findUnique({
+    where: { stripeEventId: event.id }
+  })
+  if (existingEvent) {
+    return new Response('Already processed', { status: 200 }) // return 200, not error
+  }
+
+  await db.stripeEvents.create({ data: { stripeEventId: event.id } })
+  await fulfillOrder(event.data.object)
+}
+```
+
+## Trial period abuse
+
+If trial logic only checks `hasUsedTrial` by email, attackers use throwaway emails for infinite free trials.
+
+```typescript
+// WRONG — email-only check
+const user = await db.users.findFirst({ where: { email, hasUsedTrial: false } })
+
+// RIGHT — also check payment method fingerprint or device fingerprint
+// Or: require a payment method upfront and cancel if they don't convert
+await stripe.subscriptions.create({
+  trial_period_days: 14,
+  payment_behavior: 'default_incomplete', // requires card upfront
+})
+```
+
 ## Keep test and live keys completely separate
 ```bash
 # .env.local (development)

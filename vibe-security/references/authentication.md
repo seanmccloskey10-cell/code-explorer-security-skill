@@ -16,6 +16,48 @@ const payload = jwt.verify(token, process.env.JWT_SECRET, {
 })
 ```
 
+## IDOR — users accessing other users' data
+
+Insecure Direct Object Reference: fetching records by ID without checking the user owns them.
+
+```typescript
+// WRONG — any authenticated user can read any diary entry by guessing the ID
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const entry = await db.diaryEntries.findUnique({ where: { id: params.id } })
+  return Response.json(entry) // returns another user's private diary entry
+}
+
+// RIGHT — always scope to the authenticated user
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return new Response('Unauthorised', { status: 401 })
+
+  const entry = await db.diaryEntries.findFirst({
+    where: {
+      id: params.id,
+      userId: user.id // ownership check — returns null if not theirs
+    }
+  })
+  if (!entry) return new Response('Not found', { status: 404 })
+  return Response.json(entry)
+}
+```
+
+## Email enumeration
+
+Returning different errors for "email not found" vs "wrong password" reveals which emails are registered — useful for targeted phishing or credential stuffing.
+
+```typescript
+// WRONG — reveals which emails exist
+if (!user) return new Response('User not found', { status: 404 })
+if (!passwordMatch) return new Response('Wrong password', { status: 401 })
+
+// RIGHT — same message for both cases
+if (!user || !passwordMatch) {
+  return new Response('Invalid email or password', { status: 401 })
+}
+```
+
 ## What to scan for
 
 **Critical:**
