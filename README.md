@@ -10,11 +10,11 @@ Part of the [Code Explorer](https://whop.com/code-explorer/) course by Sean McCl
 
 **Claude Code (global — works in any project):**
 ```bash
-npx skills add https://github.com/seanmccloskey/code-explorer-security-skill --skill vibe-security
+npx skills add https://github.com/seanmccloskey10-cell/code-explorer-security-skill --skill vibe-security
 ```
 
 **Manual install:**
-Copy the `vibe-security/` folder to `~/.claude/skills/`
+Copy the `vibe-security/` folder to `~/.claude/skills/` (Mac/Linux) or `C:/Users/YOUR_NAME/.claude/skills/` (Windows)
 
 ## Usage
 

@@ -2,42 +2,7 @@
 
 ## Critical vulnerabilities
 
-### Next.js middleware bypass (CVE-2025-29927, severity 9.1)
-Middleware can be completely bypassed by sending a request with the `x-middleware-subrequest` header. **Never rely on middleware alone for authentication.**
-
-```typescript
-// WRONG — middleware-only auth can be bypassed
-export function middleware(request: NextRequest) {
-  if (!request.cookies.get('token')) {
-    return NextResponse.redirect('/login')
-  }
-}
-
-// RIGHT — re-verify auth inside every Server Action and Route Handler
-export async function sensitiveAction() {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorised')
-  // now do the thing
-}
-```
-
-### Server Actions are public POST endpoints
-Every Server Action is publicly accessible. Each one needs: (1) input validation, (2) authentication check, (3) authorisation — confirm the user owns the resource, not just that they're logged in.
-
-```typescript
-// WRONG
-export async function deletePost(postId: string) {
-  await db.posts.delete({ where: { id: postId } })
-}
-
-// RIGHT
-export async function deletePost(postId: string) {
-  const user = await getCurrentUser() // throws if not logged in
-  const post = await db.posts.findFirst({ where: { id: postId } })
-  if (post.userId !== user.id) throw new Error('Forbidden') // ownership check
-  await db.posts.delete({ where: { id: postId } })
-}
-```
+> **Next.js middleware bypass and Server Actions** are covered in `nextjs-specific.md`. Read that file alongside this one.
 
 ### JWT handling
 ```typescript
@@ -72,6 +37,8 @@ const payload = jwt.verify(token, process.env.JWT_SECRET, {
 
 ## Token storage
 ```typescript
+import { cookies } from 'next/headers'
+
 // WRONG — XSS accessible
 localStorage.setItem('token', accessToken)
 

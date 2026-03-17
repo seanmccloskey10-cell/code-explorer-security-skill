@@ -49,6 +49,14 @@ Trigger me when you:
 
 Share your code and I'll run a severity-ranked audit with concrete before/after fixes for every issue found.
 
-## Arguments
+## Argument handling
 
-$ARGUMENTS
+Read the value of $ARGUMENTS and behave accordingly:
+
+- **empty or "full"** — run a complete audit across all categories
+- **"quick"** — run only the top 10 most critical checks: (1) hardcoded secrets, (2) .env in .gitignore, (3) NEXT_PUBLIC_ on secret keys, (4) Supabase RLS enabled, (5) service_role key client-side, (6) Stripe webhook signature verification, (7) client-submitted prices, (8) auth checks only in middleware, (9) debug mode in production, (10) rate limiting on auth endpoints. Report findings only, skip advice and examples.
+- **"deep"** — run full audit plus: check git history for previously committed secrets, scan for known CVE versions, test for business logic flaws, check for race conditions in payment flows, audit all environment variable prefixes across all files
+- **"focus:auth"** — audit authentication and authorisation only (authentication.md + nextjs-specific.md auth sections)
+- **"focus:payments"** — audit Stripe and payment flows only (payments.md)
+- **"focus:database"** — audit Supabase/database only (database-security.md)
+- **"focus:secrets"** — audit secrets and environment variables only (secrets-and-env.md)

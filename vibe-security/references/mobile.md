@@ -30,30 +30,26 @@ await SecureStore.setItemAsync('token', accessToken)
 ```
 
 ## Deep link security
+
+Never include tokens, passwords, or sensitive state in deep link URLs. Deep link parameters are logged by operating systems and appear in analytics tools.
+
 ```typescript
-// WRONG — executing actions directly from deep link params
-// myapp://reset-password?token=abc&newPassword=xyz
-// attacker crafts a link with a malicious token
+// WRONG — token in the URL, logged everywhere
+// myapp://reset-password?token=abc123&newPassword=xyz
 
-// RIGHT — validate and sanitize all deep link params
-// never include sensitive data in the URL itself
-// use a short-lived token, validate server-side
+// RIGHT — short-lived token only, validated server-side
+import * as Linking from 'expo-linking'
+
+Linking.addEventListener('url', ({ url }) => {
+  const { queryParams } = Linking.parse(url)
+
+  // validate token exists and is a string
+  if (!queryParams?.token || typeof queryParams.token !== 'string') return
+
+  // send token to server for validation — never trust client-side
+  validateResetToken(queryParams.token)
+})
 ```
-
-Never include tokens, passwords, or sensitive state in deep link URLs. Deep link parameters are logged by operating systems and can appear in analytics tools.
-
-## Publishing to the App Store (iOS)
-Requirements your student's parent should know:
-- Apple Developer account: **$99/year**
-- Must have a Mac (or use a cloud Mac service like MacStadium)
-- App Store review takes 1-3 days, may be rejected
-- Age-appropriate content guidelines apply strictly
-
-**Easier alternative for sharing with friends: TestFlight**
-- No App Store review
-- Friends download via a link, not the App Store
-- Free, up to 10,000 testers
-- Best path for an 11-year-old's first app
 
 ## What to scan for
 

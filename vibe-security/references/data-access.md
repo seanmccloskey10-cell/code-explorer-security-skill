@@ -90,4 +90,4 @@ await db.users.update({
 - No limits on text field length
 - File uploads with no type or size validation
 - Redirect destinations accepted from user input without whitelist validation
-- Form submissions with no CSRF protection
+- Form submissions with no CSRF protection — in Next.js App Router, Server Actions include built-in CSRF protection via origin checking. For Pages Router API routes, use the `csrf` package or a double-submit cookie pattern.

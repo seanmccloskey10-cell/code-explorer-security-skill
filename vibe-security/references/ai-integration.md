@@ -22,22 +22,11 @@ export async function POST(req: Request) {
 ```
 
 ## Spending caps — set these immediately
-AI bills can hit thousands of pounds overnight if a key leaks or a bot finds your endpoint.
+AI bills can hit thousands overnight if a key leaks or a bot finds your endpoint.
 
 1. Set a hard monthly cap in your OpenAI/Anthropic dashboard
-2. Add per-user limits in your own database
-3. Set billing alerts at 50% and 80% of your expected monthly spend
-4. Rate limit your AI proxy endpoint (see rate-limiting.md)
-
-```typescript
-// Per-user daily limit example
-const usage = await db.aiUsage.findFirst({
-  where: { userId, date: today }
-})
-if (usage?.requestCount >= 50) {
-  return new Response('Daily limit reached', { status: 429 })
-}
-```
+2. Set billing alerts at 50% and 80% of your expected monthly spend
+3. Rate limit your AI proxy endpoint and add per-user quotas — see `rate-limiting.md` for implementation
 
 ## Prompt injection
 If user input is included in your AI prompts, attackers can manipulate the AI's behaviour.
