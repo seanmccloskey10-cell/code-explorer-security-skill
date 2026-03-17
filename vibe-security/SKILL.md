@@ -55,55 +55,144 @@ Trigger me when you:
 
 Share your code and I'll run a severity-ranked audit with concrete before/after fixes for every issue found.
 
-## Output format
+## If no code has been shared yet
 
-Always produce results in this exact format:
+Ask the student to share their code before running the audit:
+"To audit your project, share your code — paste individual files, or if you're using Claude Code, I can read your project directly by running this in your project folder."
 
 ---
 
-## Security Audit — [Project Name or "Your Project"]
+## Output format
 
-**Plain English summary:** One or two sentences a non-technical person could understand. e.g. "Your app has one critical issue: your database is open to the public internet. Everything else looks good."
+Produce results in two parts every time:
+
+### Part 1 — Chat output (shown to the student)
+
+Use this exact structure:
+
+---
+## 🔒 Security Audit — [App name]
+
+**Score: X/10** [🔴 if 5 or below | 🟡 if 6-7 | 🟢 if 8+]
+
+**Plain English:** [2 sentences max, no jargon. E.g. "Your app has one serious problem: anyone on the internet can read every user's private diary entries. Everything else is in good shape."]
+
+**[N] critical · [N] important · [N] good practice**
 
 ---
 
 ### 🔴 Critical — fix before sharing this with anyone
-*These are things an attacker could exploit right now.*
 
-For each issue:
-- **What it is** (plain English, one sentence — no jargon)
-- **Why it matters** (what could actually happen)
-- **The fix** (before/after code where possible)
+**Issue #[N]: [Plain English title — no jargon]**
+What this means: [One sentence anyone can understand]
+What could happen: [Concrete real-world consequence — e.g. "Someone could give themselves free premium access without paying"]
+Fix prompt — paste this back to me:
+> "Fix critical issue #[N]: [specific, actionable description including file name and relevant env variable names if known]"
+
+[Repeat for each critical issue]
 
 ---
 
 ### 🟡 Important — fix before launching publicly
-*These won't get you hacked today but will before long.*
 
-Same format as above.
+**Issue #[N]: [Plain English title]**
+What this means: [One sentence]
+Fix prompt:
+> "Fix important issue #[N]: [specific description]"
+
+[Repeat for each important issue]
 
 ---
 
 ### 🟢 Good practice — worth doing when you have time
-*These are improvements, not emergencies.*
-
-Brief list only — no need for full explanations.
+- [Brief item]
+- [Brief item]
 
 ---
 
 ### ✅ What's already secure
-*Acknowledge what's done right — important for student confidence.*
+[Acknowledge what's done right — important for confidence. If nothing notable, say "No critical issues found in [area]."]
 
 ---
 
-### Next steps
-1. Fix critical issues first — paste each fix into your project one at a time
-2. Ask me to explain anything you don't understand in plain English
-3. Re-run `/vibe-security` after fixing to confirm issues are resolved
+**Next steps:**
+1. Start with critical issues — paste each fix prompt above, one at a time
+2. Re-run `/vibe-security` after fixing to update your score
+3. Ask me to explain anything in plain English
+4. Your full report has been saved to `SECURITY_REPORT.md` in your project
 
 ---
 
-**If no code has been shared yet:** Ask the student to share their code before running the audit. Say: "To audit your project, please share your code — you can paste individual files, or if you're using Claude Code, I can read your project directly."
+### Scoring guide
+- Start at 10
+- Each 🔴 critical issue: -2 points
+- Each 🟡 important issue: -1 point
+- Minimum score: 1 (never show 0 — always something salvageable)
+
+---
+
+### Part 2 — Save SECURITY_REPORT.md to the project root
+
+After producing the chat output, save a file called `SECURITY_REPORT.md` in the project root using the Write tool. Use this template:
+
+```markdown
+# Security Report — [App Name]
+
+**Date:** [today's date]
+**Score:** [X]/10
+**Last audited by:** Code Explorer Security Skill
+
+## Summary
+[Same plain English summary as chat output]
+
+## Issues
+
+### 🔴 Critical
+
+#### Issue #1: [Plain English title]
+- **Status:** [ ] Open
+- **What it means:** [plain English]
+- **What could happen:** [concrete consequence]
+- **Fix prompt:** Paste this into Claude: "[fix prompt]"
+- **Technical detail:** [brief technical explanation for reference]
+
+[Repeat for each critical issue]
+
+---
+
+### 🟡 Important
+
+#### Issue #[N]: [Plain English title]
+- **Status:** [ ] Open
+- **What it means:** [plain English]
+- **Fix prompt:** "[fix prompt]"
+
+[Repeat for each important issue]
+
+---
+
+### 🟢 Good Practice
+- [ ] [item]
+- [ ] [item]
+
+---
+
+### ✅ Already secure
+[List what's good]
+
+---
+
+## How to use this report
+1. Work through 🔴 critical issues first
+2. Paste each fix prompt into Claude — it will apply the fix for you
+3. Tick the checkbox when done: change `[ ]` to `[x]`
+4. Re-run `/vibe-security` to update this report and your score
+5. Share this file with your teacher before a lesson so they can see your progress
+
+## Re-run
+Run `/vibe-security` at any time to update this report.
+To export as PDF: install the "Markdown PDF" extension in VS Code, then right-click this file → Markdown PDF: Export (pdf).
+```
 
 ## Argument handling
 
