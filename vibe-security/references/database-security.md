@@ -1,5 +1,51 @@
 # Database Security (Supabase & Firebase)
 
+## The real RLS problem — it's not just "is it on?"
+
+RLS being enabled is not enough. The most dangerous pattern — and the one AI tools consistently miss — is storing sensitive fields like `subscription_status` or `rate_limit` on the same table users are allowed to write to.
+
+**This is what happened in a real breach:** A developer had RLS correctly configured so users could only read and write their own rows. But `subscription_status` and `rate_limit` were columns on the same user table. An attacker updated their own row to set `subscription_status = 'premium'` and `rate_limit = 10000` — giving themselves free premium access and the ability to hammer the AI endpoint and run up a $10,000 bill. The RLS was technically correct. The data architecture was wrong.
+
+**The rule:** Never store server-controlled values on the same table as user-editable data.
+
+```sql
+-- WRONG — user can UPDATE their own row and set subscription_status = 'premium'
+-- and rate_limit = 10000, then call your AI endpoint 10,000 times
+CREATE TABLE profiles (
+  id uuid PRIMARY KEY,
+  name text,
+  subscription_status text,  -- DANGEROUS on a user-writable table
+  rate_limit integer,         -- DANGEROUS on a user-writable table
+  ai_generations_used integer
+);
+
+-- RIGHT — separate tables with different access levels
+CREATE TABLE profiles (
+  id uuid PRIMARY KEY,
+  name text,
+  avatar_url text
+  -- only data the user is allowed to change
+);
+
+CREATE TABLE subscriptions (
+  user_id uuid PRIMARY KEY,
+  status text,           -- only writable by your server (service_role)
+  rate_limit integer,    -- only writable by your server (service_role)
+  plan text
+  -- no RLS UPDATE policy for users — server-only writes
+);
+```
+
+**How to audit this specifically — ask Claude:**
+- "Can a user modify their subscription status by updating their own row?"
+- "Can a user change their own rate limit?"
+- "Is there any column on a user-writable table that affects permissions, billing, or feature access?"
+- "Can a user give themselves premium access without paying?"
+
+AI tools will confirm RLS is "correctly configured" without catching this. You must ask the specific questions.
+
+---
+
 ## Supabase — the most common mistakes
 
 ### RLS is OFF by default

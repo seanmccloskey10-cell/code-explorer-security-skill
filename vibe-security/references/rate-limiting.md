@@ -35,9 +35,39 @@ export async function POST(req: Request) {
 }
 ```
 
-## Don't store rate limit counters in public Supabase tables
-Supabase tables are accessible via the REST API. Users can query and manipulate their own rate limit counters if stored in a public table. Use:
-- Upstash Redis (recommended)
+## Frontend rate limits are useless
+
+If you put rate limiting only in your UI ("you've used 5 of 5 generations"), that is not rate limiting. Anyone can find your backend endpoint in the browser Network tab and call it directly — bypassing your UI entirely. This applies to mobile apps too — backend requests are easily intercepted.
+
+**Rate limits must be enforced on the backend, not the frontend.**
+
+## Don't store rate limit counters on user-writable Supabase tables
+
+This is how developers get $10,000 AI bills. If rate limit counters are stored on a table users can UPDATE (even their own row), they can set `rate_limit = 10000` and bypass your limits entirely.
+
+```sql
+-- WRONG — user can UPDATE their own row and set ai_generations_limit = 10000
+CREATE TABLE profiles (
+  id uuid PRIMARY KEY,
+  name text,
+  ai_generations_used integer,
+  ai_generations_limit integer  -- user can change this on their own row
+);
+
+-- RIGHT — store limits in a server-only table
+-- Use a separate table with no user UPDATE policy
+CREATE TABLE usage_limits (
+  user_id uuid PRIMARY KEY REFERENCES auth.users,
+  daily_limit integer DEFAULT 10,
+  used_today integer DEFAULT 0,
+  reset_at timestamptz
+);
+-- Only your server (service_role) writes to this table
+-- Users can only SELECT their own row to see remaining quota
+```
+
+Safe storage options:
+- Upstash Redis (recommended — not accessible via Supabase REST API)
 - A private Postgres schema (not `public`)
 - Middleware-level rate limiting (Vercel, Cloudflare)
 
