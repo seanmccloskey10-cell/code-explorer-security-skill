@@ -61,22 +61,6 @@ if (session.payment_status === 'paid') {
 }
 ```
 
-## What to scan for
-
-**Critical:**
-- Price or amount values accepted from request body
-- Webhook endpoint doesn't call `stripe.webhooks.constructEvent()`
-- Stripe secret key (`sk_live_*`) in client-side code or `NEXT_PUBLIC_` prefix
-- Test keys (`sk_test_`) used in production environment
-- Subscription status checked from client-side state, not verified server-side
-
-**Important:**
-- No idempotency keys on payment operations — duplicate charges possible
-- No logging of payment events — no audit trail for disputes
-- Coupon/discount codes not validated server-side
-- Checkout session metadata set from client, not server
-- Refund/cancellation endpoints don't require authentication
-
 ## Idempotency — don't process the same event twice
 
 Stripe retries webhook events if your endpoint is slow or returns a 5xx error. Without idempotency protection, a single payment can trigger multiple fulfillments — granting duplicate credits, sending duplicate emails, or creating duplicate records.
@@ -113,6 +97,23 @@ await stripe.subscriptions.create({
   payment_behavior: 'default_incomplete', // requires card upfront
 })
 ```
+
+## What to scan for
+
+**Critical:**
+- Price or amount values accepted from request body
+- Webhook endpoint doesn't call `stripe.webhooks.constructEvent()`
+- Stripe secret key (`sk_live_*`) in client-side code or `NEXT_PUBLIC_` prefix
+- Test keys (`sk_test_`) used in production environment
+- Subscription status checked from client-side state, not verified server-side
+
+**Important:**
+- No idempotency checks — same webhook event processed twice
+- No logging of payment events — no audit trail for disputes
+- Coupon/discount codes not validated server-side
+- Checkout session metadata set from client, not server
+- Refund/cancellation endpoints don't require authentication
+- Trial logic only checks by email — allows infinite free trials
 
 ## Keep test and live keys completely separate
 ```bash

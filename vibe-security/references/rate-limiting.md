@@ -71,19 +71,9 @@ Safe storage options:
 - A private Postgres schema (not `public`)
 - Middleware-level rate limiting (Vercel, Cloudflare)
 
-## AI spending caps — always set these
+## AI spending caps
 
-Set hard limits at the provider level AND in your own code:
-
-```typescript
-// Per-user usage quota in your database
-const usage = await db.usage.findFirst({ where: { userId, month: currentMonth } })
-if (usage.tokensUsed >= MONTHLY_LIMIT) {
-  throw new Error('Monthly limit reached')
-}
-```
-
-Go to your OpenAI/Anthropic dashboard and set a hard monthly spending cap. Provider-level caps have some lag — your in-code limits are the first line of defence.
+Set hard provider-level caps and per-user quotas in your code. See `ai-integration.md` for step-by-step instructions per provider.
 
 ## What to scan for
 

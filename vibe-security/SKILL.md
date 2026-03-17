@@ -55,6 +55,56 @@ Trigger me when you:
 
 Share your code and I'll run a severity-ranked audit with concrete before/after fixes for every issue found.
 
+## Output format
+
+Always produce results in this exact format:
+
+---
+
+## Security Audit — [Project Name or "Your Project"]
+
+**Plain English summary:** One or two sentences a non-technical person could understand. e.g. "Your app has one critical issue: your database is open to the public internet. Everything else looks good."
+
+---
+
+### 🔴 Critical — fix before sharing this with anyone
+*These are things an attacker could exploit right now.*
+
+For each issue:
+- **What it is** (plain English, one sentence — no jargon)
+- **Why it matters** (what could actually happen)
+- **The fix** (before/after code where possible)
+
+---
+
+### 🟡 Important — fix before launching publicly
+*These won't get you hacked today but will before long.*
+
+Same format as above.
+
+---
+
+### 🟢 Good practice — worth doing when you have time
+*These are improvements, not emergencies.*
+
+Brief list only — no need for full explanations.
+
+---
+
+### ✅ What's already secure
+*Acknowledge what's done right — important for student confidence.*
+
+---
+
+### Next steps
+1. Fix critical issues first — paste each fix into your project one at a time
+2. Ask me to explain anything you don't understand in plain English
+3. Re-run `/vibe-security` after fixing to confirm issues are resolved
+
+---
+
+**If no code has been shared yet:** Ask the student to share their code before running the audit. Say: "To audit your project, please share your code — you can paste individual files, or if you're using Claude Code, I can read your project directly."
+
 ## Argument handling
 
 Read the value of $ARGUMENTS and behave accordingly:

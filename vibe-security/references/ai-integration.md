@@ -63,7 +63,7 @@ await db.usageLimits.upsert({
 
 Store these counters in a server-only table — not on a user-writable Supabase table (see `database-security.md` and `rate-limiting.md`).
 
-3. Rate limit your AI proxy endpoint — see `rate-limiting.md` for implementation
+Rate limit your AI proxy endpoint — see `rate-limiting.md` for implementation.
 
 ## Prompt injection
 If user input is included in your AI prompts, attackers can manipulate the AI's behaviour.

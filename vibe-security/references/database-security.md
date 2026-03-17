@@ -130,9 +130,6 @@ CREATE POLICY "Users update own profile" ON profiles
 -- Then in your API, explicitly select only safe columns to update
 ```
 
-### Don't store rate limit counters in public tables
-Supabase tables are accessible via the REST API. Users can reset their own rate limit counters if stored in a public table. Use a private schema or Upstash Redis.
-
 ## What to scan for
 
 **Critical:**
