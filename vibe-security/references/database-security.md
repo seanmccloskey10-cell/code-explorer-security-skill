@@ -130,6 +130,148 @@ CREATE POLICY "Users update own profile" ON profiles
 -- Then in your API, explicitly select only safe columns to update
 ```
 
+---
+
+## Layer 2 — The edge cases AI tools never catch
+
+### Multiple RLS policies combine with OR, not AND
+
+Most developers assume adding more policies makes access more restrictive. It doesn't. Postgres combines permissive policies with OR — so one loose policy cancels out a tight one. This is the default behaviour and almost nobody knows it.
+
+```sql
+-- You think this is restrictive: only admins OR owner can read
+-- It's actually: anyone who is owner OR admin can read — the loose policy wins
+CREATE POLICY "Owner access" ON documents
+  FOR SELECT USING (auth.uid() = owner_id);
+
+CREATE POLICY "Admin access" ON documents
+  FOR SELECT USING (is_admin = true); -- if user can set is_admin = true, they read everything
+
+-- To get AND behaviour, use RESTRICTIVE policies explicitly
+CREATE POLICY "Must be owner" ON documents
+  AS RESTRICTIVE
+  FOR SELECT USING (auth.uid() = owner_id);
+```
+
+**How to audit:** Ask Claude: "Are any of my RLS policies PERMISSIVE? Could two policies on the same table combine to give broader access than intended?"
+
+---
+
+### SECURITY DEFINER functions bypass RLS entirely
+
+Postgres functions marked `SECURITY DEFINER` run as the function owner — usually a superuser — not as the calling user. RLS is completely ignored. AI tools generate these constantly without flagging it.
+
+```sql
+-- WRONG — this function runs as superuser, RLS on 'orders' is ignored
+CREATE OR REPLACE FUNCTION get_user_orders(user_id uuid)
+RETURNS TABLE(id uuid, total numeric)
+LANGUAGE plpgsql
+SECURITY DEFINER  -- THIS bypasses all RLS policies on the orders table
+AS $$
+BEGIN
+  RETURN QUERY SELECT id, total FROM orders WHERE orders.user_id = $1;
+END;
+$$;
+
+-- RIGHT — use SECURITY INVOKER (or just don't mark it at all, INVOKER is the default)
+CREATE OR REPLACE FUNCTION get_user_orders(user_id uuid)
+RETURNS TABLE(id uuid, total numeric)
+LANGUAGE plpgsql
+SECURITY INVOKER  -- runs as the calling user, RLS applies normally
+AS $$
+BEGIN
+  RETURN QUERY SELECT id, total FROM orders WHERE orders.user_id = $1;
+END;
+$$;
+```
+
+**How to audit:** Ask Claude: "Do any of my Postgres functions or Supabase Edge Functions use SECURITY DEFINER? What data do they access?"
+
+---
+
+### Views don't inherit RLS from their underlying tables
+
+A view over a table with RLS runs as the view owner (often superuser) — it bypasses all row policies on the underlying table. Every row becomes visible through the view regardless of what RLS says.
+
+```sql
+-- Table has RLS — users can only see their own rows
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Own messages" ON messages USING (auth.uid() = user_id);
+
+-- This view bypasses that RLS entirely — all rows visible to everyone
+CREATE VIEW all_messages AS SELECT * FROM messages;
+-- Any user querying all_messages sees every message
+
+-- RIGHT — use security_invoker on the view (Postgres 15+ / Supabase support)
+CREATE VIEW all_messages
+WITH (security_invoker = true)
+AS SELECT * FROM messages;
+```
+
+**How to audit:** Ask Claude: "Do I have any views over tables with RLS enabled? Are those views marked with security_invoker?"
+
+---
+
+### INSERT without WITH CHECK allows row claiming
+
+An INSERT policy without a `WITH CHECK` clause lets a user insert a row with someone else's `user_id` — claiming ownership of rows that should belong to another account. AI scaffold almost never includes `WITH CHECK`.
+
+```sql
+-- WRONG — user can insert a row with any user_id, including another user's
+CREATE POLICY "Users insert own rows" ON posts
+  FOR INSERT WITH CHECK (true); -- no ownership check at all
+
+-- Also wrong — USING applies to reads, not writes
+CREATE POLICY "Users insert own rows" ON posts
+  FOR INSERT USING (auth.uid() = user_id); -- USING ignored on INSERT
+
+-- RIGHT — WITH CHECK enforces ownership on write
+CREATE POLICY "Users insert own rows" ON posts
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+```
+
+**How to audit:** Ask Claude: "Do my INSERT RLS policies have WITH CHECK clauses? Can a user insert a row with a different user_id?"
+
+---
+
+### Aggregate queries leak data even with RLS
+
+RLS prevents users from reading individual rows they don't own. But aggregate functions — `COUNT()`, `SUM()`, `AVG()`, `MAX()` — still work across the whole table. A user can't read other users' orders, but they can run queries that reveal information about them.
+
+```sql
+-- User can't read other orders (RLS blocks it)
+SELECT * FROM orders WHERE user_id != auth.uid(); -- blocked
+
+-- But they CAN do this — reveals business data about other users
+SELECT COUNT(*) FROM orders WHERE total > 10000; -- works, leaks aggregate info
+SELECT AVG(total) FROM orders; -- works
+SELECT MAX(created_at) FROM orders; -- reveals when last order was placed
+```
+
+**Fix:** For sensitive tables, apply RLS policies that filter all queries to the current user's data, including aggregates. Consider whether your API should expose raw table access at all or go through controlled server-side functions.
+
+---
+
+### Soft deletes need RLS treatment too
+
+If you use `deleted_at IS NULL` for soft deletes, your RLS policy still needs to consider deleted rows. By default, a user querying their own rows will also see their own deleted rows — and if the policy is wrong, they might see soft-deleted rows belonging to others.
+
+```sql
+-- WRONG — user can query deleted rows from other users if policy only checks user_id
+CREATE POLICY "Own rows" ON posts
+  USING (auth.uid() = user_id); -- no check on deleted_at
+
+-- A user can do: SELECT * FROM posts WHERE deleted_at IS NOT NULL
+-- and see all their own deleted content (usually fine)
+-- but if policy has any gap, deleted rows from others may be visible
+
+-- RIGHT — decide explicitly: should users see their own deleted rows?
+CREATE POLICY "Own active rows" ON posts
+  USING (auth.uid() = user_id AND deleted_at IS NULL);
+```
+
+---
+
 ## What to scan for
 
 **Critical:**
