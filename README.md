@@ -32,22 +32,43 @@ Both modes give you a score out of 10, a plain English summary of what's wrong, 
 
 ## Install
 
-**Step 1 — open Command Prompt** (search "cmd" in the Windows start menu)
+### Windows — Command Prompt (recommended)
 
-**Step 2 — paste this and hit enter:**
+Search "cmd" in the Start menu to open Command Prompt, then paste:
 
+```cmd
+git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill && xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
 ```
-git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill && xcopy /E /I "code-explorer-security-skill\vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
+
+### Windows — PowerShell or VS Code terminal
+
+If you're in PowerShell (blue terminal) or the VS Code terminal, run these **two commands separately**:
+
+```powershell
+git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill
+xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "$env:USERPROFILE\.claude\skills\vibe-security"
 ```
 
-That's it. No account needed. No configuration.
+### If git clone says "already exists"
 
-**Mac / Linux — paste this instead:**
+The folder was cloned before. Just run the copy step:
+
+```cmd
+xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
+```
+
+Or in PowerShell:
+```powershell
+xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "$env:USERPROFILE\.claude\skills\vibe-security"
+```
+
+### Mac / Linux
+
 ```bash
 git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill && cp -r code-explorer-security-skill/vibe-security ~/.claude/skills/
 ```
 
-**Step 3 — restart Claude Code**, then open any project and run `/vibe-security quick`.
+**Restart Claude Code**, then open any project and run `/vibe-security quick`.
 
 ---
 
@@ -55,8 +76,15 @@ git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill &
 
 When a new version is released, open Command Prompt and run:
 
+```cmd
+cd code-explorer-security-skill && git pull && xcopy /E /I /Y "vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
 ```
-cd code-explorer-security-skill && git pull && xcopy /E /I "vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
+
+Or in PowerShell (run each line separately):
+```powershell
+cd code-explorer-security-skill
+git pull
+xcopy /E /I /Y "vibe-security" "$env:USERPROFILE\.claude\skills\vibe-security"
 ```
 
 ---
