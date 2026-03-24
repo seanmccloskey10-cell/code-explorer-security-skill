@@ -32,43 +32,63 @@ Both modes give you a score out of 10, a plain English summary of what's wrong, 
 
 ## Install
 
-### Windows — Command Prompt (recommended)
+### The easiest way — let Claude do it for you
 
-Search "cmd" in the Start menu to open Command Prompt, then paste:
+No terminal needed. Just open your project in VS Code with Claude Code running, then paste this into the chat:
 
+```
+Clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill and copy the vibe-security folder into .claude/skills/ inside my project
+```
+
+Claude will propose the commands. Click **approve**. That's it.
+
+**Then close VS Code completely and reopen it.** Claude Code reads skills at startup, so it needs a fresh launch.
+
+Once reopened, run:
+```
+/vibe-security quick
+```
+
+---
+
+### What gets installed
+
+After install you'll see a new folder in your project sidebar:
+
+```
+your-project/
+└── .claude/
+    └── skills/
+        └── vibe-security/
+            ├── SKILL.md
+            └── references/
+```
+
+That's the skill — just files. You can open and read them.
+
+---
+
+### If Claude can't run the commands — do it manually
+
+**Windows (Command Prompt):** Search "cmd" in the Start menu, paste this:
 ```cmd
 git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill && xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
 ```
 
-### Windows — PowerShell or VS Code terminal
-
-If you're in PowerShell (blue terminal) or the VS Code terminal, run these **two commands separately**:
-
+**Windows (PowerShell or VS Code terminal):** Run these two lines separately:
 ```powershell
 git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill
 xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "$env:USERPROFILE\.claude\skills\vibe-security"
 ```
 
-### If git clone says "already exists"
+**If git clone says "already exists"** — the repo was downloaded before. Skip the clone, just run the copy line.
 
-The folder was cloned before. Just run the copy step:
-
-```cmd
-xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "%USERPROFILE%\.claude\skills\vibe-security"
-```
-
-Or in PowerShell:
-```powershell
-xcopy /E /I /Y "code-explorer-security-skill\vibe-security" "$env:USERPROFILE\.claude\skills\vibe-security"
-```
-
-### Mac / Linux
-
+**Mac / Linux:**
 ```bash
 git clone https://github.com/seanmccloskey10-cell/code-explorer-security-skill && cp -r code-explorer-security-skill/vibe-security ~/.claude/skills/
 ```
 
-**Restart Claude Code**, then open any project and run `/vibe-security quick`.
+Close and reopen VS Code, then run `/vibe-security quick`.
 
 ---
 
