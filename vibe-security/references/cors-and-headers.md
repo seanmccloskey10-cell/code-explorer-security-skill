@@ -1,43 +1,26 @@
 # CORS & Security Headers
 
-## Why vibe apps always get this wrong
+## CORS misconfiguration
 
-CORS and security headers are invisible until something goes wrong. AI tools never set them — they're not part of "making the app work." Every vibe-coded app ships without them. They're not in the tutorial. They're not in the error message. They're in the breach report.
+CORS controls which origins (domains) can make requests to your API. Misconfigured CORS lets any website steal your users' data.
 
----
-
-## CORS Misconfiguration
-
-CORS tells browsers which other websites are allowed to make requests to your API.
-
-### The dangerous pattern
-
-```js
-// WRONG — allows any website to call your API with the user's credentials
+### The dangerous combination
+```typescript
+// WRONG — wildcard origin + credentials = any site can make authenticated requests as your user
 app.use(cors({
   origin: '*',
-  credentials: true  // this combination is especially dangerous
+  credentials: true,
 }))
-```
 
-`Access-Control-Allow-Credentials: true` + `Access-Control-Allow-Origin: *` is blocked by browsers but often misconfigured in subtle ways. The real danger is overly permissive origins:
+// ALSO WRONG — reflecting the origin header blindly
+const origin = req.headers.get('origin')
+res.setHeader('Access-Control-Allow-Origin', origin) // trusts any origin
 
-```js
-// WRONG — checks if origin "includes" your domain, so attacker.yourdomain.evil.com passes
-const origin = req.headers.origin
-if (origin.includes('yourdomain.com')) {
-  res.setHeader('Access-Control-Allow-Origin', origin)
-}
-```
-
-### The right pattern
-
-```js
 // RIGHT — explicit allowlist only
 const allowedOrigins = [
   'https://yourdomain.com',
-  'https://www.yourdomain.com'
-]
+  process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : null,
+].filter(Boolean)
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -47,130 +30,91 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'))
     }
   },
-  credentials: true
+  credentials: true,
 }))
 ```
 
-### In Next.js
-
-```js
-// next.config.js
+### Next.js API routes
+```typescript
+// WRONG — open to any origin
 async headers() {
-  return [
-    {
-      source: '/api/:path*',
-      headers: [
-        {
-          key: 'Access-Control-Allow-Origin',
-          value: 'https://yourdomain.com'  // not *
-        }
-      ]
-    }
-  ]
+  return [{ source: '/api/:path*', headers: [{ key: 'Access-Control-Allow-Origin', value: '*' }] }]
+}
+
+// RIGHT — specific origin only
+async headers() {
+  return [{
+    source: '/api/:path*',
+    headers: [{ key: 'Access-Control-Allow-Origin', value: 'https://yourdomain.com' }]
+  }]
 }
 ```
 
-### What to check
-- Is `Access-Control-Allow-Origin` set to `*` on API routes?
-- Is `credentials: true` used with a permissive origin?
-- Does the origin validation use substring matching instead of exact match?
-- Is CORS applied to admin or internal routes?
+### What to scan for
+**Critical:**
+- Access-Control-Allow-Origin: * on any route that handles authenticated data
+- Origin reflected from request headers without validation
+- credentials: true paired with a wildcard or dynamic origin
+
+**Important:**
+- No CORS policy at all on API routes
+- Development origins (localhost) left in production config
 
 ---
 
 ## Security Headers
 
-Security headers are HTTP response headers that tell the browser how to behave. They're the second line of defence after your code. Zero vibe-coded apps set them. One middleware call adds most of them.
+Security headers are a second line of defence. They limit what attackers can do even if a vulnerability gets through.
 
-### The six headers that matter
+### next.config.js — full header setup
+```javascript
+const securityHeaders = [
+  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    ].join('; ')
+  },
+]
 
-**1. Content-Security-Policy (CSP)**
-Prevents XSS by telling the browser which scripts are allowed to run.
-```
-Content-Security-Policy: default-src 'self'; script-src 'self' https://trusted-cdn.com
-```
-Without this: injected scripts run freely.
-
-**2. Strict-Transport-Security (HSTS)**
-Forces HTTPS. Prevents SSL stripping attacks.
-```
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-```
-Without this: attackers can downgrade HTTPS to HTTP.
-
-**3. X-Frame-Options**
-Prevents your site being embedded in an iframe (clickjacking).
-```
-X-Frame-Options: DENY
-```
-Without this: attackers can trick users into clicking things they don't intend to.
-
-**4. X-Content-Type-Options**
-Prevents MIME sniffing — browser won't try to guess file types.
-```
-X-Content-Type-Options: nosniff
-```
-
-**5. Referrer-Policy**
-Controls how much of your URL is sent to other sites when users click links.
-```
-Referrer-Policy: strict-origin-when-cross-origin
-```
-
-**6. Permissions-Policy**
-Restricts browser features (camera, microphone, geolocation) to what you actually need.
-```
-Permissions-Policy: camera=(), microphone=(), geolocation=(self)
-```
-
-### How to add all of them in Next.js (one block)
-
-```js
-// next.config.js
-async headers() {
-  return [
-    {
-      source: '/(.*)',
-      headers: [
-        {
-          key: 'X-Frame-Options',
-          value: 'DENY'
-        },
-        {
-          key: 'X-Content-Type-Options',
-          value: 'nosniff'
-        },
-        {
-          key: 'Referrer-Policy',
-          value: 'strict-origin-when-cross-origin'
-        },
-        {
-          key: 'Strict-Transport-Security',
-          value: 'max-age=31536000; includeSubDomains'
-        },
-        {
-          key: 'Permissions-Policy',
-          value: 'camera=(), microphone=(), geolocation=(self)'
-        }
-        // CSP requires tuning for your specific app — see below
-      ]
-    }
-  ]
+module.exports = {
+  async headers() {
+    return [{ source: '/(.*)', headers: securityHeaders }]
+  },
 }
 ```
 
-### CSP requires more care
-CSP needs to match your app's actual script/style sources. A too-strict CSP breaks the app. A too-loose one is useless. Start with report-only mode:
+### What each header does — plain English
 
-```
-Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline'
-```
+| Header | What it prevents |
+|---|---|
+| Strict-Transport-Security | Forces HTTPS — prevents downgrade attacks |
+| X-Frame-Options | Prevents your site being embedded in iframes (clickjacking) |
+| X-Content-Type-Options | Stops browser guessing file types — prevents MIME attacks |
+| Referrer-Policy | Controls what URL is sent when users click external links |
+| Content-Security-Policy | Limits where scripts/styles can load from — reduces XSS impact |
+| Permissions-Policy | Restricts camera, microphone, geolocation access |
 
-Check the browser console for violations, then tighten.
+### What to scan for
+**Critical:**
+- No Content-Security-Policy header
+- No X-Frame-Options — app can be embedded in iframes
 
-### How to verify
-Use [securityheaders.com](https://securityheaders.com) or run:
-```bash
-curl -I https://yourdomain.com
-```
-Look for the six header names in the response.
+**Important:**
+- No Strict-Transport-Security — users can be downgraded to HTTP
+- No X-Content-Type-Options
+- CSP uses unsafe-inline without a nonce
+
+**Good practice:**
+- Test headers at securityheaders.com after deploying
+- Move from unsafe-inline CSP to nonce-based CSP once stable
